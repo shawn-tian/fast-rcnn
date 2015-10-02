@@ -2,3 +2,9 @@
 .ipynb_checkpoints
 utils/*.c
 utils/*.so
+*.swp
+*.swo
+*.jpg
+*.mat
+fast_rcnn_models/*.caffemodel
+*.tgz

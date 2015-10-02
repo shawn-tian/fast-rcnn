@@ -63,7 +63,7 @@ __C.TRAIN.USE_FLIPPED = True
 # Train bounding-box regressors
 __C.TRAIN.BBOX_REG = False
 # train the model with ground truth box only. without selective search boxes
-__C.TRAIN.IS_GT_BOX_ONLY = False
+__C.TRAIN.IS_GT_BOX_ONLY = True
 
 # Overlap required between a ROI and ground-truth box in order for that ROI to
 # be used as a bounding-box regression training example
