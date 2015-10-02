@@ -17,7 +17,7 @@ class imdb(object):
     """Image database."""
 
     def __init__(self, name):
-        self._name = name
+        self._name = name.replace('/', '_')
         self._num_classes = 0
         self._classes = []
         self._image_index = []

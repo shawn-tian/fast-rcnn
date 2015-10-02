@@ -16,6 +16,7 @@ import scipy.io as sio
 import utils.cython_bbox
 import cPickle
 import subprocess
+from fast_rcnn.config import cfg
 
 class pascal_voc(datasets.imdb):
     def __init__(self, image_set, year, devkit_path=None):
@@ -113,22 +114,26 @@ class pascal_voc(datasets.imdb):
         """
         cache_file = os.path.join(self.cache_path,
                                   self.name + '_selective_search_roidb.pkl')
-
-        if os.path.exists(cache_file):
-            with open(cache_file, 'rb') as fid:
-                roidb = cPickle.load(fid)
-            print '{} ss roidb loaded from {}'.format(self.name, cache_file)
-            return roidb
+        if not cfg.TRAIN.IS_GT_BOX_ONLY:
+            if os.path.exists(cache_file):
+                with open(cache_file, 'rb') as fid:
+                    roidb = cPickle.load(fid)
+                print '{} ss roidb loaded from {}'.format(self.name, cache_file)
+                return roidb
 
         if int(self._year) == 2007 or self._image_set != 'test':
             gt_roidb = self.gt_roidb()
-            ss_roidb = self._load_selective_search_roidb(gt_roidb)
-            roidb = datasets.imdb.merge_roidbs(gt_roidb, ss_roidb)
+            if cfg.TRAIN.IS_GT_BOX_ONLY:
+                roidb = gt_roidb
+            else:
+                ss_roidb = self._load_selective_search_roidb(gt_roidb)
+                roidb = datasets.imdb.merge_roidbs(gt_roidb, ss_roidb)
         else:
             roidb = self._load_selective_search_roidb(None)
-        with open(cache_file, 'wb') as fid:
-            cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print 'wrote ss roidb to {}'.format(cache_file)
+        if not cfg.TRAIN.IS_GT_BOX_ONLY:
+            with open(cache_file, 'wb') as fid:
+                cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
+            print 'wrote ss roidb to {}'.format(cache_file)
 
         return roidb
 

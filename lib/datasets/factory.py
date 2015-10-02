@@ -40,8 +40,17 @@ for top_k in np.arange(1000, 11000, 1000):
 def get_imdb(name):
     """Get an imdb (image database) by name."""
     if not __sets.has_key(name):
-        raise KeyError('Unknown dataset: {}'.format(name))
-    return __sets[name]()
+        import os
+        if os.path.exists(name):
+            from datasets.vi_detection import ViDetectionData
+            import yaml
+            with open(name, 'r') as fp:
+                image_info = yaml.load(fp) 
+            return ViDetectionData(image_info)
+        else:
+            raise KeyError('Unknown dataset: {}'.format(name))
+    else:
+        return __sets[name]()
 
 def list_imdbs():
     """List all registered imdbs."""

@@ -31,13 +31,18 @@ def get_minibatch(roidb, num_classes):
     # Now, build the region of interest and label blobs
     rois_blob = np.zeros((0, 5), dtype=np.float32)
     labels_blob = np.zeros((0), dtype=np.float32)
-    bbox_targets_blob = np.zeros((0, 4 * num_classes), dtype=np.float32)
-    bbox_loss_blob = np.zeros(bbox_targets_blob.shape, dtype=np.float32)
+    if cfg.TRAIN.BBOX_REG:
+        bbox_targets_blob = np.zeros((0, 4 * num_classes), dtype=np.float32)
+        bbox_loss_blob = np.zeros(bbox_targets_blob.shape, dtype=np.float32)
     # all_overlaps = []
     for im_i in xrange(num_images):
-        labels, overlaps, im_rois, bbox_targets, bbox_loss \
-            = _sample_rois(roidb[im_i], fg_rois_per_image, rois_per_image,
-                           num_classes)
+        if cfg.TRAIN.BBOX_REG:
+            labels, overlaps, im_rois, bbox_targets, bbox_loss \
+                = _sample_rois(roidb[im_i], fg_rois_per_image, rois_per_image,
+                               num_classes)
+        else:
+            labels, overlaps, im_rois = _sample_rois(roidb[im_i], \
+                    fg_rois_per_image, rois_per_image, num_classes)
 
         # Add to RoIs blob
         rois = _project_im_rois(im_rois, im_scales[im_i])
@@ -47,8 +52,9 @@ def get_minibatch(roidb, num_classes):
 
         # Add to labels, bbox targets, and bbox loss blobs
         labels_blob = np.hstack((labels_blob, labels))
-        bbox_targets_blob = np.vstack((bbox_targets_blob, bbox_targets))
-        bbox_loss_blob = np.vstack((bbox_loss_blob, bbox_loss))
+        if cfg.TRAIN.BBOX_REG:
+            bbox_targets_blob = np.vstack((bbox_targets_blob, bbox_targets))
+            bbox_loss_blob = np.vstack((bbox_loss_blob, bbox_loss))
         # all_overlaps = np.hstack((all_overlaps, overlaps))
 
     # For debug visualizations
@@ -105,11 +111,13 @@ def _sample_rois(roidb, fg_rois_per_image, rois_per_image, num_classes):
     overlaps = overlaps[keep_inds]
     rois = rois[keep_inds]
 
-    bbox_targets, bbox_loss_weights = \
-            _get_bbox_regression_labels(roidb['bbox_targets'][keep_inds, :],
-                                        num_classes)
-
-    return labels, overlaps, rois, bbox_targets, bbox_loss_weights
+    if cfg.TRAIN.BBOX_REG:
+        bbox_targets, bbox_loss_weights = \
+                _get_bbox_regression_labels(roidb['bbox_targets'][keep_inds, :],
+                                            num_classes)
+        return labels, overlaps, rois, bbox_targets, bbox_loss_weights
+    else:
+        return labels, overlaps, rois
 
 def _get_image_blob(roidb, scale_inds):
     """Builds an input blob from the images in the roidb at the specified
