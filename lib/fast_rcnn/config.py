@@ -102,7 +102,7 @@ __C.TEST.NMS = 0.3
 __C.TEST.SVM = False
 
 # Test using bounding-box regressors
-__C.TEST.BBOX_REG = False 
+__C.TEST.BBOX_REG = True
 
 #
 # MISC

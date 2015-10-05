@@ -323,5 +323,6 @@ def test_net(net, imdb):
     print 'Applying NMS to all detections'
     nms_dets = apply_nms(all_boxes, cfg.TEST.NMS)
 
-    print 'Evaluating detections'
-    imdb.evaluate_detections(nms_dets, output_dir)
+    #print 'Evaluating detections'
+    #imdb.evaluate_detections(nms_dets, output_dir)
+    return nms_dets

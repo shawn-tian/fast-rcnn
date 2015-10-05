@@ -114,12 +114,11 @@ class pascal_voc(datasets.imdb):
         """
         cache_file = os.path.join(self.cache_path,
                                   self.name + '_selective_search_roidb.pkl')
-        if not cfg.TRAIN.IS_GT_BOX_ONLY:
-            if os.path.exists(cache_file):
-                with open(cache_file, 'rb') as fid:
-                    roidb = cPickle.load(fid)
-                print '{} ss roidb loaded from {}'.format(self.name, cache_file)
-                return roidb
+        if os.path.exists(cache_file):
+            with open(cache_file, 'rb') as fid:
+                roidb = cPickle.load(fid)
+            print '{} ss roidb loaded from {}'.format(self.name, cache_file)
+            return roidb
 
         if int(self._year) == 2007 or self._image_set != 'test':
             gt_roidb = self.gt_roidb()
@@ -130,10 +129,9 @@ class pascal_voc(datasets.imdb):
                 roidb = datasets.imdb.merge_roidbs(gt_roidb, ss_roidb)
         else:
             roidb = self._load_selective_search_roidb(None)
-        if not cfg.TRAIN.IS_GT_BOX_ONLY:
-            with open(cache_file, 'wb') as fid:
-                cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
-            print 'wrote ss roidb to {}'.format(cache_file)
+        with open(cache_file, 'wb') as fid:
+            cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
+        print 'wrote ss roidb to {}'.format(cache_file)
 
         return roidb
 

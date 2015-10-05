@@ -151,6 +151,6 @@ if __name__ == '__main__':
 
     print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
     print 'Demo for data/demo/001551.jpg'
-    demo(net, '001551', ('sofa', 'tvmonitor'))
+    #demo(net, '001551', ('sofa', 'tvmonitor'))
 
     plt.show()

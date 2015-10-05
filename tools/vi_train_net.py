@@ -81,7 +81,7 @@ if __name__ == '__main__':
         caffe.set_device(args.gpu_id)
     
     imdb = get_imdb(args.imdb_name)
-    print 'Loaded dataset `{:s}` for training'.format(imdb.name)
+    #print 'Loaded dataset `{:s}` for training'.format(imdb.name)
     roidb = get_training_roidb(imdb)
 
     output_dir = get_output_dir(imdb, None)

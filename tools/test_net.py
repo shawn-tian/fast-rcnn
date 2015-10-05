@@ -78,4 +78,4 @@ if __name__ == '__main__':
     imdb = get_imdb(args.imdb_name)
     imdb.competition_mode(args.comp_mode)
 
-    test_net(net, imdb)
+    dets = test_net(net, imdb)
