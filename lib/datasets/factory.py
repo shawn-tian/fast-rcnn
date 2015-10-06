@@ -87,7 +87,7 @@ def get_imdb_folder_yaml(folder):
     result['label_set'] = infer_label_set(result['images'])
     return ViDetectionData(result)
 
-def get_imdb_yaml(folder):
+def get_imdb_yaml(name):
     print 'loading the data'
     with open(name, 'r') as fp:
         image_info = yaml.load(fp, Loader = yaml.CLoader)
