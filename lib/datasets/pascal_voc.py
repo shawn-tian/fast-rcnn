@@ -122,11 +122,8 @@ class pascal_voc(datasets.imdb):
 
         if int(self._year) == 2007 or self._image_set != 'test':
             gt_roidb = self.gt_roidb()
-            if cfg.TRAIN.IS_GT_BOX_ONLY:
-                roidb = gt_roidb
-            else:
-                ss_roidb = self._load_selective_search_roidb(gt_roidb)
-                roidb = datasets.imdb.merge_roidbs(gt_roidb, ss_roidb)
+            ss_roidb = self._load_selective_search_roidb(gt_roidb)
+            roidb = datasets.imdb.merge_roidbs(gt_roidb, ss_roidb)
         else:
             roidb = self._load_selective_search_roidb(None)
         with open(cache_file, 'wb') as fid:

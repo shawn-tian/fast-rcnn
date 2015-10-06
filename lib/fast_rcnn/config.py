@@ -61,16 +61,14 @@ __C.TRAIN.BG_THRESH_LO = 0.1
 __C.TRAIN.USE_FLIPPED = True
 
 # Train bounding-box regressors
-__C.TRAIN.BBOX_REG = False
-# train the model with ground truth box only. without selective search boxes
-__C.TRAIN.IS_GT_BOX_ONLY = True
+__C.TRAIN.BBOX_REG = True
 
 # Overlap required between a ROI and ground-truth box in order for that ROI to
 # be used as a bounding-box regression training example
 __C.TRAIN.BBOX_THRESH = 0.5
 
 # Iterations between snapshots
-__C.TRAIN.SNAPSHOT_ITERS = 10000
+__C.TRAIN.SNAPSHOT_ITERS = 500
 
 # solver.prototxt specifies the snapshot path prefix, this adds an optional
 # infix to yield the path: <prefix>[_<infix>]_iters_XYZ.caffemodel

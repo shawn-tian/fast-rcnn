@@ -17,6 +17,10 @@ import caffe
 import argparse
 import pprint
 import time, os, sys
+import cv2
+import numpy as np
+from demo import vis_detections
+import matplotlib.pyplot as plt
 
 def parse_args():
     """
@@ -79,3 +83,18 @@ if __name__ == '__main__':
     imdb.competition_mode(args.comp_mode)
 
     dets = test_net(net, imdb)
+    if 1:
+        classes = imdb.classes
+        idx_image = 0
+        for i, cls in enumerate(classes):
+            if i == 0:
+                continue
+            for j, index in enumerate(imdb.image_index):
+                box_info = dets[i][j]
+                if type(box_info) is list and len(box_info) == 0:
+                    continue
+                assert type(box_info) == np.ndarray, (box_info, type(box_info))
+                im = cv2.imread(imdb.image_path_at(j))
+                vis_detections(im, str(cls), box_info, thresh= 0.5)
+                plt.show()
+

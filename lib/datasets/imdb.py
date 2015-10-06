@@ -162,12 +162,13 @@ class imdb(object):
             if gt_roidb is not None:
                 gt_boxes = gt_roidb[i]['boxes']
                 gt_classes = gt_roidb[i]['gt_classes']
-                gt_overlaps = bbox_overlaps(boxes.astype(np.float),
-                                            gt_boxes.astype(np.float))
-                argmaxes = gt_overlaps.argmax(axis=1)
-                maxes = gt_overlaps.max(axis=1)
-                I = np.where(maxes > 0)[0]
-                overlaps[I, gt_classes[argmaxes[I]]] = maxes[I]
+                if gt_boxes.size > 0:
+                    gt_overlaps = bbox_overlaps(boxes.astype(np.float),
+                                                gt_boxes.astype(np.float))
+                    argmaxes = gt_overlaps.argmax(axis=1)
+                    maxes = gt_overlaps.max(axis=1)
+                    I = np.where(maxes > 0)[0]
+                    overlaps[I, gt_classes[argmaxes[I]]] = maxes[I]
 
             overlaps = scipy.sparse.csr_matrix(overlaps)
             roidb.append({'boxes' : boxes,
@@ -185,8 +186,11 @@ class imdb(object):
                 a[i]['boxes'] = np.vstack((a[i]['boxes'], b[i]['boxes']))
                 a[i]['gt_classes'] = np.hstack((a[i]['gt_classes'],
                                                 b[i]['gt_classes']))
-                a[i]['gt_overlaps'] = scipy.sparse.vstack([a[i]['gt_overlaps'],
-                                                           b[i]['gt_overlaps']])
+                if a[i]['gt_overlaps'].size == 0:
+                    a[i]['gt_overlaps'] = b[i]['gt_overlaps']
+                else:
+                    a[i]['gt_overlaps'] = scipy.sparse.vstack([a[i]['gt_overlaps'],
+                                                               b[i]['gt_overlaps']])
         return a
 
     def competition_mode(self, on):

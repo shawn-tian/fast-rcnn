@@ -44,8 +44,10 @@ def get_imdb(name):
         if os.path.exists(name):
             from datasets.vi_detection import ViDetectionData
             import yaml
+            print 'loading the data'
             with open(name, 'r') as fp:
-                image_info = yaml.load(fp) 
+                image_info = yaml.load(fp, Loader = yaml.CLoader) 
+            print 'finish loading'
             return ViDetectionData(image_info)
         else:
             raise KeyError('Unknown dataset: {}'.format(name))
@@ -55,3 +57,4 @@ def get_imdb(name):
 def list_imdbs():
     """List all registered imdbs."""
     return __sets.keys()
+
