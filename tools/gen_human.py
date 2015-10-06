@@ -11,6 +11,10 @@ _classes = ('__background__', # always index 0
                  'cow', 'diningtable', 'dog', 'horse',
                  'motorbike', 'person', 'pottedplant',
                  'sheep', 'sofa', 'train', 'tvmonitor')
+def ensure_folder(folder):
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+
 def gen_yaml(pkl_roi, image_list_file, output):
     with open(pkl_roi, 'r') as fp:
         bb_info = pickle.load(fp)
@@ -34,37 +38,40 @@ def gen_yaml(pkl_roi, image_list_file, output):
             label = labels[j]
             if label != 15 and label != 0:
                 continue
-            curr_all_box.append(dict(x1y1x2y2 = ' '.join(str(b) for b in bb), \
-                    label = _classes[label]))
+            if label == 0:
+                curr_all_box.append(dict(x1y1x2y2 = ' '.join(str(b) for b in
+                    bb)))
+            else:
+                curr_all_box.append(dict(x1y1x2y2 = ' '.join(str(b) for b in bb), \
+                        label = _classes[label]))
         all_out_image.append(dict(name = image_name, \
                 boxes = curr_all_box))
-        if len(all_out_image) > 1000:
-            break
     print len(all_out_image)
-    label_set = list(_classes)
-    with open(output, 'w') as fp:
-        yaml.dump(dict(folder = image_folder, \
-                label_set = label_set, \
-                images = all_out_image), \
-                fp, default_flow_style = False, Dumper = yaml.CDumper)
-    x = dict(folder = image_folder, \
-                label_set = label_set, \
-                images = all_out_image)
-    with open('tmp.pkl', 'wb') as fp:
-        pickle.dump(x, fp, pickle.HIGHEST_PROTOCOL)
+    #label_set = list(_classes)
+    for i in range(len(all_out_image)):
+        bn = os.path.basename(all_out_image[i]['name'])
+        bbn = os.path.splitext(bn)[0]
+        fn = os.path.join(output, bbn + '.yaml')
+        ensure_folder(os.path.dirname(fn))
+        with open(fn, 'w') as fp:
+            yaml.dump(dict(folder = image_folder, \
+                    images = [all_out_image[i]]), \
+                    fp, \
+                    default_flow_style = False, Dumper = yaml.CDumper)
+    print 'finished'
 
 #image_list_file = '/home/jianfeng/code/fast-rcnn/data/VOCdevkit2007/VOC2007/ImageSets/Main/trainval.txt'
 #pkl_roi = '/home/jianfeng/code/fast-rcnn/data/cache/voc_2007_trainval_selective_search_roidb.pkl'
-#output = 'data/human_train.yaml'
+#output = 'data/yaml_database/human_train'
 #gen_yaml(pkl_roi, image_list_file, output)
 
-image_list_file = '/home/jianfeng/code/fast-rcnn/data/VOCdevkit2007/VOC2007/ImageSets/Main/test.txt'
-pkl_roi = '/home/jianfeng/code/fast-rcnn/data/cache/voc_2007_test_selective_search_roidb.pkl'
-output = 'data/human_ss.yaml'
-gen_yaml(pkl_roi, image_list_file, output)
+#image_list_file = '/home/jianfeng/code/fast-rcnn/data/VOCdevkit2007/VOC2007/ImageSets/Main/test.txt'
+#pkl_roi = '/home/jianfeng/code/fast-rcnn/data/cache/voc_2007_test_selective_search_roidb.pkl'
+#output = 'data/yaml_database/human_test_ss'
+#gen_yaml(pkl_roi, image_list_file, output)
 
 image_list_file= '/home/jianfeng/code/fast-rcnn/data/VOCdevkit2007/VOC2007/ImageSets/Main/test.txt'
-pkl_roi = '/home/jianfeng/code/fast-rcnn/data/cache/voc_2007_trainval_gt_roidb.pkl'
-output = 'data/human_gt.yaml'
+pkl_roi = '/home/jianfeng/code/fast-rcnn/data/cache/voc_2007_test_gt_roidb.pkl'
+output = 'data/yaml_database/human_test_gt'
 gen_yaml(pkl_roi, image_list_file, output)
 
