@@ -85,7 +85,6 @@ def get_imdb_folder_yaml(folder):
             assert result['folder'] == x['folder']
             result['images'].extend(x['images'])
     result['label_set'] = infer_label_set(result['images'])
-    import pdb; pdb.set_trace()
     return ViDetectionData(result)
 
 def get_imdb_yaml(folder):
