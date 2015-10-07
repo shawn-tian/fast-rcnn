@@ -8,3 +8,8 @@ utils/*.so
 *.mat
 fast_rcnn_models/*.caffemodel
 *.tgz
+models/CaffeNet/solver.prototxt.out
+models/CaffeNet/test.prototxt.out
+models/CaffeNet/train.prototxt.out
+models/VGG16/solver.prototxt.out
+models/VGG16/train.prototxt.out

@@ -204,8 +204,13 @@ These models are all available in the [Caffe Model Zoo](https://github.com/BVLC/
 **Train** a Fast R-CNN detector. For example, train a VGG16 network on VOC 2007 trainval:
 
 ```Shell
-./tools/train_net.py --gpu 0 --solver models/VGG16/solver.prototxt \
-	--weights data/imagenet_models/VGG16.v2.caffemodel
+./tools/train_net.py --gpu 0 --solver models/VGG16/solver.prototxt --weights data/imagenet_models/VGG16.v2.caffemodel
+./tools/vi_train_net.py --gpu 0 --solver models/VGG16/solver.prototxt --weights data/imagenet_models/VGG16.v2.caffemodel --imdb gt_ss.yaml --iters 50
+./tools/vi_train_net.py --gpu 0 --solver models/VGG16/solver.prototxt --weights data/imagenet_models/VGG16.v2.caffemodel \
+        --imdb data/yaml_database/human_train --iters 20000 
+./tools/vi_train_net.py --gpu 0 --solver models/VGG16/solver.prototxt --weights data/imagenet_models/VGG16.v2.caffemodel --imdb gt_only.yaml
+./tools/vi_train_net.py --gpu 0 --solver models/CaffeNet/solver.prototxt --weights data/imagenet_models/CaffeNet.v2.caffemodel \
+        --imdb /home/jianfeng/data/ShoeBag/ShoeBagBoxes --label_set shoe,bag
 ```
 
 If you see this error
@@ -219,8 +224,12 @@ then you need to make sure the `matlab` binary is in your `$PATH`. MATLAB is cur
 **Test** a Fast R-CNN detector. For example, test the VGG 16 network on VOC 2007 test:
 
 ```Shell
-./tools/test_net.py --gpu 1 --def models/VGG16/test.prototxt \
-	--net output/default/voc_2007_trainval/vgg16_fast_rcnn_iter_40000.caffemodel
+./tools/test_net.py --gpu 1 --def models/VGG16/test.prototxt --net output/default/voc_2007_trainval/vgg16_fast_rcnn_iter_40000.caffemodel
+./tools/test_net.py --gpu 1 --def models/VGG16/test.prototxt --net data/fast_rcnn_models/vgg16_fast_rcnn_iter_40000.caffemodel 
+./tools/test_net.py --gpu 1 --def models/VGG16/test.prototxt --net output/default/none/vgg16_fast_rcnn_iter_500.caffemodel --imdb data/human_ss.yaml 
+./tools/test_net.py --gpu 1 --def models/VGG16/test.prototxt --net data/fast_rcnn_models/vgg16_fast_rcnn_iter_40000.caffemodel --imdb gt_ss.yaml
+./tools/test_net.py --gpu 1 --def models/CaffeNet/test.prototxt --net output/default/none/caffenet_fast_rcnn_iter_2500.caffemodel \
+        --imdb /home/jianfeng/data/ShoeBag/ShoeBagBoxes --label_set shoe,bag
 ```
 
 Test output is written underneath `$FRCN_ROOT/output`.
