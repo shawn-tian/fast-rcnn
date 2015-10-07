@@ -49,6 +49,10 @@ def add_bbox_regression_targets(roidb):
         rois = roidb[im_i]['boxes']
         max_overlaps = roidb[im_i]['max_overlaps']
         max_classes = roidb[im_i]['max_classes']
+        if not any(max_classes):
+            import pdb; pdb.set_trace()
+        #assert any(max_classes), 'no forground bounding box for image
+        #{}'.format(roidb[im_i])
         roidb[im_i]['bbox_targets'] = \
                 _compute_targets(rois, max_overlaps, max_classes)
 
@@ -97,7 +101,10 @@ def _compute_targets(rois, overlaps, labels):
 
     # Find which gt ROI each ex ROI has max overlap with:
     # this will be the ex ROI's gt target
-    gt_assignment = ex_gt_overlaps.argmax(axis=1)
+    try:
+        gt_assignment = ex_gt_overlaps.argmax(axis=1)
+    except:
+        import pdb; pdb.set_trace()
     gt_rois = rois[gt_inds[gt_assignment], :]
     ex_rois = rois[ex_inds, :]
 

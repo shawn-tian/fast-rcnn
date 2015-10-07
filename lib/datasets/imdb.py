@@ -101,6 +101,10 @@ class imdb(object):
             oldx2 = boxes[:, 2].copy()
             boxes[:, 0] = widths[i] - oldx2 - 1
             boxes[:, 2] = widths[i] - oldx1 - 1
+            if any(boxes[:, 2] < boxes[:, 0]):
+                ind = np.where(boxes[:, 2] < boxes[:, 0])[0]
+                print (i, ind, self.image_path_at(i), boxes[ind[0], :])
+                assert False
             assert (boxes[:, 2] >= boxes[:, 0]).all()
             entry = {'boxes' : boxes,
                      'gt_overlaps' : self.roidb[i]['gt_overlaps'],
