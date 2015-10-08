@@ -62,10 +62,16 @@ def clamp_box(data_config):
     all_image_info = data_config['images']
     folder = data_config['folder']
     import PIL
+    to_remove_image = []
     for image_info in all_image_info:
         all_box = image_info['boxes']
         fn = os.path.join(folder, image_info['name'])
-        width, height = PIL.Image.open(fn).size
+        try:
+            width, height = PIL.Image.open(fn).size
+        except:
+            print 'not available: {}'.format(fn)
+            to_remove_image.append(image_info)
+            continue
         num_box_org = len(all_box)
         to_be_remove = []
         for box in all_box:
@@ -84,6 +90,8 @@ def clamp_box(data_config):
             all_box.remove(box)
         if len(to_be_remove) > 0:
             print 'box removed: {}-->{}'.format(num_box_org, len(all_box))
+    for image_info in to_remove_image:
+        all_image_info.remove(image_info)
 
 def infer_label_set(all_image_info):
     result = set()

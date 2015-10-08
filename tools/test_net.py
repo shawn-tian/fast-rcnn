@@ -50,6 +50,9 @@ def parse_args():
     parser.add_argument('--label_set', dest='label_set',
                         help='label_set selected, seperated by comma.e.g. --label_set bag,shoe', 
                         default=None)
+    parser.add_argument('--output_yaml', dest='output_yaml',
+                        help='output_yaml_file', 
+                        default=None)
     parser.add_argument('--set', dest='set_cfgs',
                         help='set config keys', default=None,
                         nargs=argparse.REMAINDER)
@@ -137,7 +140,9 @@ if __name__ == '__main__':
             result.append(curr_result)
         result = dict(images = result)
         pprint(result)
-        with open('predict', 'w') as fp:
+        output_yaml = args.output_yaml
+        if output_yam == None:
+            output_yaml = 'output_yaml'
+        with open(output_yaml, 'w') as fp:
             yaml.dump(result, fp, Dumper = yaml.CDumper, 
                     default_flow_style = False)
-
