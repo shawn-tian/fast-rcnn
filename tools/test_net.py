@@ -90,7 +90,7 @@ if __name__ == '__main__':
     if label_set != None:
         label_set = label_set.split(',')
     imdb = get_imdb(args.imdb_name, 
-            dict(label_set = label_set, num_selected = 10))
+            dict(label_set = label_set, num_selected = 100))
     imdb.competition_mode(args.comp_mode)
 
     proto_file = args.prototxt
@@ -141,7 +141,7 @@ if __name__ == '__main__':
         result = dict(images = result)
         pprint(result)
         output_yaml = args.output_yaml
-        if output_yam == None:
+        if output_yaml == None:
             output_yaml = 'output_yaml'
         with open(output_yaml, 'w') as fp:
             yaml.dump(result, fp, Dumper = yaml.CDumper, 
