@@ -90,7 +90,7 @@ if __name__ == '__main__':
     if label_set != None:
         label_set = label_set.split(',')
     imdb = get_imdb(args.imdb_name, 
-            dict(label_set = label_set, num_selected = 100))
+            dict(label_set = label_set, num_selected = 2))
     imdb.competition_mode(args.comp_mode)
 
     proto_file = args.prototxt
@@ -112,6 +112,7 @@ if __name__ == '__main__':
     net = caffe.Net(proto_file + '.out', args.caffemodel, caffe.TEST)
     net.name = os.path.splitext(os.path.basename(args.caffemodel))[0]
     dets = test_net(net, imdb)
+    imdb.evaluate_detections(dets)
     result = []
     if 1:
         classes = imdb.classes
