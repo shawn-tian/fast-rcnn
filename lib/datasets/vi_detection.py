@@ -63,8 +63,11 @@ class ViDetectionData(datasets.imdb):
         gt_classes = np.zeros((num_objs), dtype=np.int32)
         overlaps = np.zeros((num_objs, self.num_classes), dtype=np.float32)
         for ix, box_info in enumerate(all_box):
-            x1, y1, x2, y2 = [int(float(s)) for s \
-                    in box_info['x1y1x2y2'].split()]
+            if type(box_info['x1y1x2y2']) == str:
+                x1, y1, x2, y2 = [int(float(s)) for s \
+                        in box_info['x1y1x2y2'].split()]
+            else:
+                x1, y1, x2, y2 = box_info['x1y1x2y2']
             boxes[ix, :] = [x1, y1, x2, y2]
             if is_has_label:
                 label_name = box_info.get('label', None)
@@ -118,8 +121,11 @@ class ViDetectionData(datasets.imdb):
         gt_classes = np.zeros((num_objs), dtype=np.int32)
         overlaps = np.zeros((num_objs, self.num_classes), dtype=np.float32)
         for ix, box_info in enumerate(all_box):
-            x1, y1, x2, y2 = [int(float(s)) for s \
-                    in box_info['x1y1x2y2'].split()]
+            if type(box_info['x1y1x2y2']) == str:
+                x1, y1, x2, y2 = [int(float(s)) for s \
+                        in box_info['x1y1x2y2'].split()]
+            else:
+                x1, y1, x2, y2 = box_info['x1y1x2y2']
             boxes[ix, :] = [x1, y1, x2, y2]
             label_name = box_info.get('label', None)
             if is_gt:

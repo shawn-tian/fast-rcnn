@@ -41,17 +41,21 @@ for top_k in np.arange(1000, 11000, 1000):
             __sets[name] = (lambda split=split, year=year, top_k=top_k:
                     _selective_search_IJCV_top_k(split, year, top_k))
 
-def get_yaml_files(folder, num_selected):
+def get_bb_files(folder, num_selected, suffix):
     sub_names = [];
     for dir_path, sub_dir, all_sub_file in os.walk(folder):
         for sub_file in all_sub_file:
-            if sub_file.endswith('.yaml') or \
-                    sub_file.endswith('.yml'):
+            is_good = False
+            for s in suffix:
+                if sub_file.endswith(s):
+                    is_good = True
+                    break
+            if is_good:
                 full_name = os.path.join(dir_path, sub_file);
                 x = full_name.replace(folder, '');
                 if len(x) >= 1 and x[0] == '/':
                     x = x[1 : ];
-                sub_names.append(x);
+                sub_names.append(full_name);
     if num_selected > 0:
         num_selected = min(num_selected, len(sub_names))
         return sub_names[: num_selected]
@@ -76,7 +80,10 @@ def clamp_box(data_config):
         to_be_remove = []
         for box in all_box:
             bb_str = box['x1y1x2y2']
-            x1, y1, x2, y2 = [int(float(s)) for s in bb_str.split()]
+            if type(bb_str) == str:
+                x1, y1, x2, y2 = [int(float(s)) for s in bb_str.split()]
+            else:
+                x1, y1, x2, y2 = bb_str
             x1 = max(0, x1)
             y1 = max(0, y1)
             x2 = min(x2, width - 1)
@@ -84,8 +91,7 @@ def clamp_box(data_config):
             if x2 < x1 or y2 < y1:
                 to_be_remove.append(box)
             else:
-                bb_str = '{} {} {} {}'.format(x1, y1, x2, y2)
-                box['x1y1x2y2'] = bb_str
+                box['x1y1x2y2'] = [x1, y1, x2, y2]
         for box in to_be_remove:
             all_box.remove(box)
         if len(to_be_remove) > 0:
@@ -128,18 +134,48 @@ def remove_unknown_box(data_config):
         for box_info in to_be_removed:
             all_box.remove(box_info)
 
-def get_imdb_folder_yaml(folder, label_set = None, num_selected = 0):
-    all_yaml_file = get_yaml_files(folder, num_selected)
+def load_xml(filename):
+    # print 'Loading: {}'.format(filename)
+    def get_data_from_tag(node, tag):
+        return node.getElementsByTagName(tag)[0].childNodes[0].data
+
+    with open(filename) as f:
+        import xml.dom.minidom as minidom
+        data = minidom.parseString(f.read())
+    objs = data.getElementsByTagName('object')
+    all_box = []
+    # Load object bounding boxes into a data frame.
+    for ix, obj in enumerate(objs):
+        # Make pixel indexes 0-based
+        x1 = float(get_data_from_tag(obj, 'xmin')) - 1
+        y1 = float(get_data_from_tag(obj, 'ymin')) - 1
+        x2 = float(get_data_from_tag(obj, 'xmax')) - 1
+        y2 = float(get_data_from_tag(obj, 'ymax')) - 1
+        label = get_data_from_tag(obj, "name").lower().strip()
+        curr_box = {'x1y1x2y2': [x1, y1, x2, y2], 'label': label}
+        all_box.append(curr_box)
+    bn = os.path.basename(filename)
+    bbn, ext = os.path.splitext(bn)
+    image_file_name = os.path.join(os.path.dirname(filename), 'JPEGImages', bbn + '.jpg')
+    curr_image = {'name': image_file_name, 'boxes': all_box}
+    return {'folder': '/', 'images': [curr_image]} 
+
+def get_imdb_multi_bb(all_yaml_file, label_set):
     result = None
     for idx, yaml_file in enumerate(all_yaml_file):
         if (idx % 100) == 0:
             print 'loading the {}/{} yaml'.format(idx, len(all_yaml_file))
-        with open(os.path.join(folder, yaml_file), 'r') as fp:
-            x = yaml.load(fp, Loader = yaml.CLoader)
-        curr_folder = x['folder']
-        for image_info in x['images']:
-            image_info['name'] = os.path.join(curr_folder, image_info['name'])
-        x['folder'] = '/'
+        import pdb; pdb.set_trace()
+        if yaml_file.endswith('.yml') or yaml_file.endswith('.yaml'):
+            with open(os.path.join(folder, yaml_file), 'r') as fp:
+                x = yaml.load(fp, Loader = yaml.CLoader)
+                curr_folder = x.get('folder', None)
+                if curr_folder != None:
+                    for image_info in x['images']:
+                        image_info['name'] = os.path.join(curr_folder, image_info['name'])
+                x['folder'] = '/'
+        elif yaml_file.endswith('.xml'):
+            x = load_xml(yaml_file)
         if result == None:
             result = x
         else:
@@ -156,6 +192,10 @@ def get_imdb_folder_yaml(folder, label_set = None, num_selected = 0):
         result['label_set'] = ['__background__'] + label_set
         remove_unknown_box(result)
     return result
+
+def get_imdb_folder(folder, label_set = None, num_selected = 0):
+    all_bb_file = get_bb_files(folder, num_selected, ['.yaml', '.yml', '.xml'])
+    return get_imdb_multi_bb(all_bb_file, label_set)
 
 def get_imdb_yaml(name, label_set = None):
     print 'loading the data'
@@ -199,7 +239,7 @@ def get_imdb(name, param = {}):
     if not __sets.has_key(name):
         if os.path.exists(name):
             if os.path.isdir(name):
-                image_info = get_imdb_folder_yaml(name, 
+                image_info = get_imdb_folder(name, 
                         param.get('label_set', None), 
                         param.get('num_selected', 0))
             elif os.path.isfile(name):
