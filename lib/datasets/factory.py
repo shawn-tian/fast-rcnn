@@ -9,6 +9,8 @@
 
 __sets = {}
 
+import sys
+import time
 import datasets.pascal_voc
 import numpy as np
 import os
@@ -16,6 +18,13 @@ import yaml
 from datasets.vi_detection import ViDetectionData
 import cPickle as pickle
 from multiprocessing import Pool
+import logging
+import PIL
+
+logging.basicConfig(level = logging.INFO, \
+        format = '[%(asctime)s] p%(process)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s')
+
+logger = logging.getLogger(__name__)
 
 def _selective_search_IJCV_top_k(split, year, top_k):
     """Return an imdb that uses the top k proposals from the selective search
@@ -62,7 +71,6 @@ def get_yaml_files(folder, num_selected):
 def clamp_box(data_config):
     all_image_info = data_config['images']
     folder = data_config['folder']
-    import PIL
     to_remove_image = []
     for image_info in all_image_info:
         all_box = image_info['boxes']
@@ -90,7 +98,8 @@ def clamp_box(data_config):
         for box in to_be_remove:
             all_box.remove(box)
         if len(to_be_remove) > 0:
-            print 'box removed: {}-->{}'.format(num_box_org, len(all_box))
+            logger.info('box removed: {}-->{}'.format(num_box_org,
+                len(all_box)))
     for image_info in to_remove_image:
         all_image_info.remove(image_info)
 
@@ -156,7 +165,11 @@ def parallel_instance_get_imdb(info):
     full_yaml_file = os.path.join(folder, yaml_file)
     with open(full_yaml_file, 'r') as fp:
         x = yaml.load(fp, Loader = yaml.CLoader)
-        check_format(x)
+        try:
+            check_format(x)
+        except:
+            logger.info('Format is illegal:{}, and ignored'.format(full_yaml_file))
+            return None
     #curr_folder = x['folder']
     curr_folder = os.path.join(
             os.path.dirname(os.path.dirname(full_yaml_file)), 
@@ -168,17 +181,23 @@ def parallel_instance_get_imdb(info):
 def parallel_get_imdb_folder_yaml(folder, label_set = None, num_selected = 0):
     all_yaml_file = get_yaml_files(folder, num_selected)
     result = None
-    pool = Pool(64)
+    logger.info("begin parallel loading yaml files")
+    pool = Pool(128)
     jobs = pool.map_async(parallel_instance_get_imdb, \
             zip([folder] * len(all_yaml_file), all_yaml_file))
     while not jobs.ready():
-        print 'left: {}'.format(jobs._number_left)
+        logger.info('left: {}'.format(jobs._number_left))
+        time.sleep(10)
     all_job_result = jobs.get()
     result = {'images': []}
     for job_result in all_job_result:
-        result['images'].extend(job_result['images'])
+        if job_result != None:
+            result['images'].extend(job_result['images'])
     result['folder'] = '/'
+    logger.info("finish parallel loading yaml files")
+    logger.info("begin to add background label if not exist")
     add_missing_labels(result['images'])
+    logger.info("finish adding background label if not exist")
     if label_set == None:
         result['label_set'] = infer_label_set(result['images'])
     else:
@@ -248,23 +267,24 @@ def get_imdb_yaml(name, label_set = None):
     return image_info
 
 def remove_images_no_label(all_info):
+    logger.info("begin remove images with no labels")
     all_image_info = all_info['images']
-    print 'before remove {}'.format(len(all_image_info))
+    logger.info("There are {} images".format(len(all_image_info)))
     to_be_remove = []
     for image_info in all_image_info:
         all_box = image_info['boxes']
         is_use = False
-        print image_info['name']
         for box in all_box:
             if box['label'] != '__background__':
                 is_use = True
                 break
         if is_use == False:
             to_be_remove.append(image_info)
+    logger.info("{} images will be removed".format(len(to_be_remove)))
     for image_info in to_be_remove:
-        print 'remove image: {}'.format(image_info['name'])
+        logger.info('no label founded and remove: {}'.format(image_info['name']))
         all_image_info.remove(image_info)
-    print 'after remove {}'.format(len(all_image_info))
+    logger.info('after remove {}'.format(len(all_image_info)))
 
 def get_imdb(name, param = {}):
     """Get an imdb (image database) by name."""
