@@ -15,6 +15,7 @@ import os
 import yaml
 from datasets.vi_detection import ViDetectionData
 import cPickle as pickle
+from multiprocessing import Pool
 
 def _selective_search_IJCV_top_k(split, year, top_k):
     """Return an imdb that uses the top k proposals from the selective search
@@ -128,15 +129,80 @@ def remove_unknown_box(data_config):
         for box_info in to_be_removed:
             all_box.remove(box_info)
 
-def get_imdb_folder_yaml(folder, label_set = None, num_selected = 0):
+def check_format(info):
+    assert type(info) == dict, info
+    assert info.has_key('images'), info
+    all_image_info = info['images']
+    assert type(all_image_info) == list, info
+    for image_info in all_image_info:
+        assert type(image_info) == dict, info
+        assert image_info.has_key('name'), info
+        if image_info.has_key('boxes'):
+            all_box_info = image_info['boxes']
+            assert type(all_box_info) == list, info
+            for box_info in all_box_info:
+                assert type(box_info) == dict, info
+                #assert box_info.has_key('label'), \
+                        #(info, box_info)
+                #assert type(box_info['label']) == str, \
+                        #(info, box_info)
+                assert box_info.has_key('x1y1x2y2'), \
+                        (info, box_info)
+                assert type(box_info['x1y1x2y2']) == str, \
+                        (info, box_info)
+
+def parallel_instance_get_imdb(info):
+    folder, yaml_file = info
+    full_yaml_file = os.path.join(folder, yaml_file)
+    with open(full_yaml_file, 'r') as fp:
+        x = yaml.load(fp, Loader = yaml.CLoader)
+        check_format(x)
+    #curr_folder = x['folder']
+    curr_folder = os.path.join(
+            os.path.dirname(os.path.dirname(full_yaml_file)), 
+            'JPEGImages')
+    for image_info in x['images']:
+        image_info['name'] = os.path.join(curr_folder, image_info['name'])
+    return x
+
+def parallel_get_imdb_folder_yaml(folder, label_set = None, num_selected = 0):
+    all_yaml_file = get_yaml_files(folder, num_selected)
+    result = None
+    pool = Pool(64)
+    jobs = pool.map_async(parallel_instance_get_imdb, \
+            zip([folder] * len(all_yaml_file), all_yaml_file))
+    while not jobs.ready():
+        print 'left: {}'.format(jobs._number_left)
+    all_job_result = jobs.get()
+    result = {'images': []}
+    for job_result in all_job_result:
+        result['images'].extend(job_result['images'])
+    result['folder'] = '/'
+    add_missing_labels(result['images'])
+    if label_set == None:
+        result['label_set'] = infer_label_set(result['images'])
+    else:
+        all_bg = [label for label in label_set if 'background' in label.lower()]
+        for bg in all_bg:
+            label_set.remove(bg)
+        result['label_set'] = ['__background__'] + label_set
+        remove_unknown_box(result)
+    return result
+
+def sequence_get_imdb_folder_yaml(folder, label_set, num_selected):
     all_yaml_file = get_yaml_files(folder, num_selected)
     result = None
     for idx, yaml_file in enumerate(all_yaml_file):
         if (idx % 100) == 0:
             print 'loading the {}/{} yaml'.format(idx, len(all_yaml_file))
-        with open(os.path.join(folder, yaml_file), 'r') as fp:
+        full_yaml_file = os.path.join(folder, yaml_file)
+        with open(full_yaml_file, 'r') as fp:
             x = yaml.load(fp, Loader = yaml.CLoader)
-        curr_folder = x['folder']
+            check_format(x)
+        #curr_folder = x['folder']
+        curr_folder = os.path.join(
+                os.path.dirname(os.path.dirname(full_yaml_file)), 
+                'JPEGImages')
         for image_info in x['images']:
             image_info['name'] = os.path.join(curr_folder, image_info['name'])
         x['folder'] = '/'
@@ -156,6 +222,12 @@ def get_imdb_folder_yaml(folder, label_set = None, num_selected = 0):
         result['label_set'] = ['__background__'] + label_set
         remove_unknown_box(result)
     return result
+
+def get_imdb_folder_yaml(folder, label_set = None, num_selected = 0):
+    if True:
+        return parallel_get_imdb_folder_yaml(folder, label_set, num_selected)
+    else:
+        return sequence_get_imdb_folder_yaml(folder, label_set, num_selected)
 
 def get_imdb_yaml(name, label_set = None):
     print 'loading the data'
