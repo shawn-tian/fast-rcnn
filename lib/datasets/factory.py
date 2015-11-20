@@ -182,12 +182,14 @@ def parallel_get_imdb_folder_yaml(folder, label_set = None, num_selected = 0):
     all_yaml_file = get_yaml_files(folder, num_selected)
     result = None
     logger.info("begin parallel loading yaml files")
-    pool = Pool(128)
+    pool = Pool(64)
     jobs = pool.map_async(parallel_instance_get_imdb, \
             zip([folder] * len(all_yaml_file), all_yaml_file))
     while not jobs.ready():
         logger.info('left: {}'.format(jobs._number_left))
         time.sleep(10)
+    pool.close()
+    pool.join()
     all_job_result = jobs.get()
     result = {'images': []}
     for job_result in all_job_result:
