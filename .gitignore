@@ -1,5 +1,6 @@
 *.pyc
 .ipynb_checkpoints
+lib/build
 utils/*.c
 utils/*.so
 *.swp

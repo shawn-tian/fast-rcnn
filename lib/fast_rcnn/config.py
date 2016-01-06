@@ -78,6 +78,52 @@ __C.TRAIN.SNAPSHOT_INFIX = ''
 # So far I haven't found this useful; likely more engineering work is required
 __C.TRAIN.USE_PREFETCH = False
 
+# Normalize the targets (subtract empirical mean, divide by empirical stddev)
+__C.TRAIN.BBOX_NORMALIZE_TARGETS = True
+# Deprecated (inside weights)
+__C.TRAIN.BBOX_INSIDE_WEIGHTS = (1.0, 1.0, 1.0, 1.0)
+# Normalize the targets using "precomputed" (or made up) means and stdevs
+# (BBOX_NORMALIZE_TARGETS must also be True)
+__C.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED = False
+__C.TRAIN.BBOX_NORMALIZE_MEANS = (0.0, 0.0, 0.0, 0.0)
+__C.TRAIN.BBOX_NORMALIZE_STDS = (0.1, 0.1, 0.2, 0.2)
+
+# Train using these proposals
+__C.TRAIN.PROPOSAL_METHOD = 'selective_search'
+
+# Make minibatches from images that have similar aspect ratios (i.e. both
+# tall and thin or both short and wide) in order to avoid wasting computation
+# on zero-padding.
+__C.TRAIN.ASPECT_GROUPING = True
+
+# Use RPN to detect objects
+__C.TRAIN.HAS_RPN = False
+# IOU >= thresh: positive example
+__C.TRAIN.RPN_POSITIVE_OVERLAP = 0.7
+# IOU < thresh: negative example
+__C.TRAIN.RPN_NEGATIVE_OVERLAP = 0.3
+# If an anchor statisfied by positive and negative conditions set to negative
+__C.TRAIN.RPN_CLOBBER_POSITIVES = False
+# Max number of foreground examples
+__C.TRAIN.RPN_FG_FRACTION = 0.5
+# Total number of examples
+__C.TRAIN.RPN_BATCHSIZE = 256
+# NMS threshold used on RPN proposals
+__C.TRAIN.RPN_NMS_THRESH = 0.7
+# Number of top scoring boxes to keep before apply NMS to RPN proposals
+__C.TRAIN.RPN_PRE_NMS_TOP_N = 12000
+# Number of top scoring boxes to keep after applying NMS to RPN proposals
+__C.TRAIN.RPN_POST_NMS_TOP_N = 2000
+# Proposal height and width both need to be greater than RPN_MIN_SIZE (at orig image scale)
+__C.TRAIN.RPN_MIN_SIZE = 16
+# Deprecated (outside weights)
+__C.TRAIN.RPN_BBOX_INSIDE_WEIGHTS = (1.0, 1.0, 1.0, 1.0)
+# Give the positive RPN examples weight of p * 1 / {num positives}
+# and give negatives a weight of (1 - p)
+# Set to -1.0 to use uniform example weighting
+__C.TRAIN.RPN_POSITIVE_WEIGHT = -1.0
+
+
 #
 # Testing options
 #
@@ -102,6 +148,22 @@ __C.TEST.SVM = False
 # Test using bounding-box regressors
 __C.TEST.BBOX_REG = True
 
+# Propose boxes
+__C.TEST.HAS_RPN = False
+
+# Test using these proposals
+__C.TEST.PROPOSAL_METHOD = 'selective_search'
+
+## NMS threshold used on RPN proposals
+__C.TEST.RPN_NMS_THRESH = 0.7
+## Number of top scoring boxes to keep before apply NMS to RPN proposals
+__C.TEST.RPN_PRE_NMS_TOP_N = 6000
+## Number of top scoring boxes to keep after applying NMS to RPN proposals
+__C.TEST.RPN_POST_NMS_TOP_N = 300
+# Proposal height and width both need to be greater than RPN_MIN_SIZE (at orig image scale)
+__C.TEST.RPN_MIN_SIZE = 16
+
+
 #
 # MISC
 #
@@ -114,7 +176,8 @@ __C.TEST.BBOX_REG = True
 __C.DEDUP_BOXES = 1./16.
 
 # Pixel mean values (BGR order) as a (1, 1, 3) array
-# These are the values originally used for training VGG16
+# We use the same pixel mean for all networks even though it's not exactly what
+# they were trained with
 __C.PIXEL_MEANS = np.array([[[102.9801, 115.9465, 122.7717]]])
 
 # For reproducibility
@@ -129,6 +192,13 @@ __C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..', '..'))
 # Place outputs under an experiments directory
 #__C.EXP_DIR = 'default'
 __C.EXP_DIR = 'real_default'
+
+# Use GPU implementation of non-maximum suppression
+__C.USE_GPU_NMS = True
+
+# Default GPU device id
+__C.GPU_ID = 0
+
 
 def get_output_dir(imdb, net):
     """Return the directory where experimental artifacts are placed.
@@ -155,10 +225,14 @@ def _merge_a_into_b(a, b):
             raise KeyError('{} is not a valid config key'.format(k))
 
         # the types must match, too
-        if type(b[k]) is not type(v):
-            raise ValueError(('Type mismatch ({} vs. {}) '
-                              'for config key: {}').format(type(b[k]),
-                                                           type(v), k))
+        old_type = type(b[k])
+        if old_type is not type(v):
+            if isinstance(b[k], np.ndarray):
+                v = np.array(v, dtype=b[k].dtype)
+            else:
+                raise ValueError(('Type mismatch ({} vs. {}) '
+                                'for config key: {}').format(type(b[k]),
+                                                            type(v), k))
 
         # recursively merge dicts
         if type(v) is edict:

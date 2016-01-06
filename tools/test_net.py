@@ -75,6 +75,8 @@ if __name__ == '__main__':
     if args.set_cfgs is not None:
         cfg_from_list(args.set_cfgs)
 
+    cfg.GPU_ID = args.gpu_id
+
     print('Using config:')
     pprint(cfg)
 
@@ -92,6 +94,8 @@ if __name__ == '__main__':
     imdb = get_imdb(args.imdb_name, 
             dict(label_set = label_set, num_selected = 2))
     imdb.competition_mode(args.comp_mode)
+    if not cfg.TEST.HAS_RPN:
+        imdb.set_proposal_method(cfg.TEST.PROPOSAL_METHOD)
 
     proto_file = args.prototxt
     with open(proto_file, 'r') as fp:
