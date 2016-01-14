@@ -46,18 +46,17 @@ def get_minibatch(roidb, num_classes):
         # Now, build the region of interest and label blobs
         rois_blob = np.zeros((0, 5), dtype=np.float32)
         labels_blob = np.zeros((0), dtype=np.float32)
-    	if cfg.TRAIN.BBOX_REG:
-        	bbox_targets_blob = np.zeros((0, 4 * num_classes), dtype=np.float32)
-        	bbox_inside_blob = np.zeros(bbox_targets_blob.shape, dtype=np.float32)
+        if cfg.TRAIN.BBOX_REG:
+            bbox_targets_blob = np.zeros((0, 4 * num_classes), dtype=np.float32)
+            bbox_inside_blob = np.zeros(bbox_targets_blob.shape, dtype=np.float32)
         # all_overlaps = []
         for im_i in xrange(num_images):
-        	if cfg.TRAIN.BBOX_REG:
-            	labels, overlaps, im_rois, bbox_targets, bbox_inside_weights \
-                	= _sample_rois(roidb[im_i], fg_rois_per_image, rois_per_image,
-                               num_classes)
-			 else:
-            	labels, overlaps, im_rois = _sample_rois(roidb[im_i], \
-                    fg_rois_per_image, rois_per_image, num_classes)
+            if cfg.TRAIN.BBOX_REG:
+                labels, overlaps, im_rois, bbox_targets, bbox_inside_weights \
+                           = _sample_rois(roidb[im_i], fg_rois_per_image, rois_per_image, num_classes)
+            else:
+                labels, overlaps, im_rois = _sample_rois(roidb[im_i], \
+                            fg_rois_per_image, rois_per_image, num_classes)
 
             # Add to RoIs blob
             rois = _project_im_rois(im_rois, im_scales[im_i])

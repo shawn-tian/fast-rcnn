@@ -20,6 +20,7 @@ import cPickle as pickle
 from multiprocessing import Pool
 import logging
 import PIL
+import pdb
 
 logging.basicConfig(level = logging.INFO, \
         format = '[%(asctime)s] p%(process)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s')
@@ -53,7 +54,7 @@ for top_k in np.arange(1000, 11000, 1000):
 
 def get_yaml_files(folder, num_selected):
     sub_names = [];
-    for dir_path, sub_dir, all_sub_file in os.walk(folder):
+    for dir_path, sub_dir, all_sub_file in os.walk(folder, followlinks=True):
         for sub_file in all_sub_file:
             if sub_file.endswith('.yaml') or \
                     sub_file.endswith('.yml'):
@@ -69,6 +70,7 @@ def get_yaml_files(folder, num_selected):
         return sub_names
 
 def clamp_box(data_config):
+    pdb.set_trace()
     all_image_info = data_config['images']
     folder = data_config['folder']
     to_remove_image = []
@@ -290,6 +292,7 @@ def remove_images_no_label(all_info):
 
 def get_imdb(name, param = {}):
     """Get an imdb (image database) by name."""
+    pdb.set_trace()
     if not __sets.has_key(name):
         if os.path.exists(name):
             if os.path.isdir(name):
@@ -300,6 +303,7 @@ def get_imdb(name, param = {}):
                 image_info = get_imdb_yaml(name, param.get('label_set', None))
             else:
                 assert False, 'what is {}'.format(name)
+            pdb.set_trace()
             clamp_box(image_info)
             if param.get('is_remove_no_label', False):
                 remove_images_no_label(image_info)

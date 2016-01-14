@@ -12,7 +12,7 @@ Demo script showing detections in sample images.
 
 See README.md for installation instructions before running.
 """
-
+import pdb
 import _init_paths
 from fast_rcnn.config import cfg
 from fast_rcnn.test import im_detect
@@ -23,21 +23,25 @@ import numpy as np
 import scipy.io as sio
 import caffe, os, sys, cv2
 import argparse
+import imghdr
 
+# CLASSES = ('__background__',
+#            'aeroplane', 'bicycle', 'bird', 'boat',
+#            'bottle', 'bus', 'car', 'cat', 'chair',
+#            'cow', 'diningtable', 'dog', 'horse',
+#            'motorbike', 'person', 'pottedplant',
+#            'sheep', 'sofa', 'train', 'tvmonitor')
 CLASSES = ('__background__',
-           'aeroplane', 'bicycle', 'bird', 'boat',
-           'bottle', 'bus', 'car', 'cat', 'chair',
-           'cow', 'diningtable', 'dog', 'horse',
-           'motorbike', 'person', 'pottedplant',
-           'sheep', 'sofa', 'train', 'tvmonitor')
+            'shoe', 'bag', 'dress', 'top', 'pant', 'skirt')
 
 NETS = {'vgg16': ('VGG16',
                   'VGG16_faster_rcnn_final.caffemodel'),
         'zf': ('ZF',
                   'ZF_faster_rcnn_final.caffemodel')}
 
+out_path = '/home/shangxuan/visenzeWork/data-platform/tasks/faster_rcnn_test/'
 
-def vis_detections(im, class_name, dets, thresh=0.5):
+def vis_detections(im, class_name, dets, im_name, thresh=0.5):
     """Draw detected bounding boxes."""
     inds = np.where(dets[:, -1] >= thresh)[0]
     if len(inds) == 0:
@@ -68,13 +72,18 @@ def vis_detections(im, class_name, dets, thresh=0.5):
     plt.axis('off')
     plt.tight_layout()
     plt.draw()
+    head, tail = os.path.split(im_name)
+    out_folder = os.path.basename(head)
+    out_img_name = os.path.join(out_path, out_folder, tail)
+    plt.savefig(out_img_name)
+    plt.close(fig)
 
 def demo(net, image_name):
     """Detect object classes in an image using pre-computed object proposals."""
 
     # Load the demo image
-    im_file = os.path.join(cfg.ROOT_DIR, 'data', 'demo', image_name)
-    im = cv2.imread(im_file)
+    # im_file = os.path.join(cfg.ROOT_DIR, 'data', 'demo', image_name)
+    im = cv2.imread(image_name)
 
     # Detect all object classes and regress object bounds
     timer = Timer()
@@ -83,7 +92,7 @@ def demo(net, image_name):
     timer.toc()
     print ('Detection took {:.3f}s for '
            '{:d} object proposals').format(timer.total_time, boxes.shape[0])
-
+    
     # Visualize detections for each class
     CONF_THRESH = 0.8
     NMS_THRESH = 0.3
@@ -98,7 +107,12 @@ def demo(net, image_name):
                           cls_scores[:, np.newaxis])).astype(np.float32)
         keep = nms(dets, NMS_THRESH)
         dets = dets[keep, :]
-        vis_detections(im, cls, dets, thresh=CONF_THRESH)
+        vis_detections(im, cls, dets, image_name, thresh=CONF_THRESH)
+    
+    # head, tail = os.path.split(image_name)
+    # out_folder = os.path.basename(head)
+    # mat_file = os.path.join(out_path, out_folder, tail+'.mat')
+    # sio.savemat(mat_file, mdict={'boxes': boxes, 'scores': scores})
 
 def parse_args():
     """Parse input arguments."""
@@ -120,10 +134,15 @@ if __name__ == '__main__':
 
     args = parse_args()
 
-    prototxt = os.path.join(cfg.ROOT_DIR, 'models', NETS[args.demo_net][0],
-                            'faster_rcnn_alt_opt', 'faster_rcnn_test.pt')
-    caffemodel = os.path.join(cfg.ROOT_DIR, 'data', 'faster_rcnn_models',
-                              NETS[args.demo_net][1])
+    # prototxt = os.path.join(cfg.ROOT_DIR, 'models', NETS[args.demo_net][0],
+    #                         'faster_rcnn_alt_opt', 'faster_rcnn_test.pt')
+    # caffemodel = os.path.join(cfg.ROOT_DIR, 'data', 'faster_rcnn_models',
+    #                           NETS[args.demo_net][1])
+    
+    prototxt = os.path.join('/home/shangxuan/visenzeWork/data-platform/tasks/faster_rcnn_vgg/faster_rcnn_None',
+                            'deploy.prototxt')
+    caffemodel = os.path.join('/home/shangxuan/visenzeWork/data-platform/tasks/faster_rcnn_vgg/faster_rcnn_None',
+                            'vgg_cnn_m_1024_faster_rcnn_iter_300000.caffemodel')
 
     if not os.path.isfile(caffemodel):
         raise IOError(('{:s} not found.\nDid you run ./data/scripts/'
@@ -144,14 +163,23 @@ if __name__ == '__main__':
     for i in xrange(2):
         _, _= im_detect(net, im)
 
-    im_names = ['000456.jpg', '000542.jpg', '001150.jpg',
-                '001763.jpg', '004545.jpg']
-    for im_name in im_names:
-        print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
-        print 'Demo for data/demo/{}'.format(im_name)
-        demo(net, im_name)
-
-	print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
-
+    #im_names = ['000456.jpg', '000542.jpg', '001150.jpg',
+    #            '001763.jpg', '004545.jpg']
+    # im_names = ['obj_shoe_005.jpg', 'obj_shoe_006.jpg', 
+    #             'obj_shoe_007.jpg', 'obj_shoe_008.jpg']
+    # for im_name in im_names:
+    input_path = '/mnt/distribute_env/usr/xf/rcnn_test/'
+    test_class = 'bottom'
+    for (dirpath, dirnames, filenames) in os.walk(input_path+test_class):
+        for im_names in filenames:
+            if im_names[0] == '.':
+                continue
+            im_name = os.path.join(input_path, test_class, im_names)
+            if imghdr.what(im_name) == None:
+                continue
+            print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
+            print 'Demo for {}'.format(im_name)
+            demo(net, im_name)
+            print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
 
     plt.show()
