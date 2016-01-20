@@ -19,6 +19,9 @@ import cPickle
 import heapq
 from utils.blob import im_list_to_blob
 import os
+import pdb
+
+DEBUG = False
 
 def _get_image_blob(im):
     """Converts an image into a network input.
