@@ -25,6 +25,8 @@ import caffe, os, sys, cv2
 import argparse
 import imghdr
 
+DEBUG = False
+
 # CLASSES = ('__background__',
 #            'aeroplane', 'bicycle', 'bird', 'boat',
 #            'bottle', 'bus', 'car', 'cat', 'chair',
@@ -81,6 +83,13 @@ def vis_detections(im, class_name, dets, im_name, thresh=0.5):
 def demo(net, image_name):
     """Detect object classes in an image using pre-computed object proposals."""
 
+    if not cfg.TEST.HAS_RPN:
+        # Load pre-computed Edgebox object proposals
+        fpath, tail = os.path.split(image_name)
+        fname = os.path.splitext(tail)[0]
+        box_file = os.path.join(fpath, fname + '.mat')
+        obj_proposals = sio.loadmat(box_file)['boxes']
+
     # Load the demo image
     # im_file = os.path.join(cfg.ROOT_DIR, 'data', 'demo', image_name)
     im = cv2.imread(image_name)
@@ -88,7 +97,11 @@ def demo(net, image_name):
     # Detect all object classes and regress object bounds
     timer = Timer()
     timer.tic()
-    scores, boxes = im_detect(net, im)
+    if not cfg.TEST.HAS_RPN:
+        scores, boxes = im_detect(net, im, obj_proposals)
+    else:
+        scores, boxes = im_detect(net, im)
+
     timer.toc()
     print ('Detection took {:.3f}s for '
            '{:d} object proposals').format(timer.total_time, boxes.shape[0])
@@ -96,6 +109,10 @@ def demo(net, image_name):
     # Visualize detections for each class
     CONF_THRESH = 0.8
     NMS_THRESH = 0.3
+    pdb.set_trace()
+
+    res_all = []
+
     for cls_ind, cls in enumerate(CLASSES[1:]):
         cls_ind += 1 # because we skipped background
         cls_boxes = boxes[:, 4*cls_ind:4*(cls_ind + 1)]
@@ -107,10 +124,29 @@ def demo(net, image_name):
                           cls_scores[:, np.newaxis])).astype(np.float32)
         keep = nms(dets, NMS_THRESH)
         dets = dets[keep, :]
+        
+        if len(keep) < 1:
+            continue
+        dets = dets[[0]] # take the highest in each class
+        res_box = {}
+        res_box['class'] = cls
+        res_box['box'] = dets[0, 0:4]
+        res_box['score'] = cls
+        res_all.append(res_box)
+
         vis_detections(im, cls, dets, image_name, thresh=CONF_THRESH)
     
-    # head, tail = os.path.split(image_name)
-    # out_folder = os.path.basename(head)
+    # save the detected boxes and classes
+    head, tail = os.path.split(image_name)
+    fname = os.path.splitext(tail)[0]
+    out_folder = os.path.basename(head)
+    txt_file = os.path.join(out_path, out_folder, fname+'.txt')
+    fp = open(txt_file, "w")
+    for box in res_all:
+        rect = box['box']
+        fp.write("%s %s %.6f %d %d %d %d" % (fname, box['class'], box['score'], rect[0], rect[1], rect[2], rect[3]) )
+    fp.close()
+
     # mat_file = os.path.join(out_path, out_folder, tail+'.mat')
     # sio.savemat(mat_file, mdict={'boxes': boxes, 'scores': scores})
 
@@ -142,7 +178,7 @@ if __name__ == '__main__':
     prototxt = os.path.join('/home/shangxuan/visenzeWork/data-platform/tasks/faster_rcnn_vgg/faster_rcnn_None',
                             'deploy.prototxt')
     caffemodel = os.path.join('/home/shangxuan/visenzeWork/data-platform/tasks/faster_rcnn_vgg/faster_rcnn_None',
-                            'vgg_cnn_m_1024_faster_rcnn_iter_300000.caffemodel')
+                           'vgg_cnn_m_1024_faster_rcnn_iter_300000.caffemodel')
 
     if not os.path.isfile(caffemodel):
         raise IOError(('{:s} not found.\nDid you run ./data/scripts/'
@@ -159,22 +195,33 @@ if __name__ == '__main__':
     print '\n\nLoaded network {:s}'.format(caffemodel)
 
     # Warmup on a dummy image
-    im = 128 * np.ones((300, 500, 3), dtype=np.uint8)
-    for i in xrange(2):
-        _, _= im_detect(net, im)
+    # im = 128 * np.ones((300, 500, 3), dtype=np.uint8)
+    # for i in xrange(2):
+    #     _, _= im_detect(net, im)
 
     #im_names = ['000456.jpg', '000542.jpg', '001150.jpg',
     #            '001763.jpg', '004545.jpg']
     # im_names = ['obj_shoe_005.jpg', 'obj_shoe_006.jpg', 
     #             'obj_shoe_007.jpg', 'obj_shoe_008.jpg']
     # for im_name in im_names:
+
+    if 0:
+        pdb.set_trace()
+        im_names = ['000542.jpg', 'bag.jpg', '000542.jpg', '001150.jpg',
+                '001763.jpg', '004545.jpg']
+        for im_name in im_names:
+            print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
+            print 'Demo for data/demo/{}'.format(im_name)
+            demo(net, im_name)
+
     input_path = '/mnt/distribute_env/usr/xf/rcnn_test/'
-    test_class = 'bottom'
+    test_class = 'skirt'
     for (dirpath, dirnames, filenames) in os.walk(input_path+test_class):
         for im_names in filenames:
             if im_names[0] == '.':
                 continue
             im_name = os.path.join(input_path, test_class, im_names)
+            
             if imghdr.what(im_name) == None:
                 continue
             print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
