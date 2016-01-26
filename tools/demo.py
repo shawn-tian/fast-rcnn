@@ -107,11 +107,13 @@ def demo(net, image_name):
            '{:d} object proposals').format(timer.total_time, boxes.shape[0])
     
     # Visualize detections for each class
-    CONF_THRESH = 0.8
+    CONF_THRESH = 0.7
     NMS_THRESH = 0.3
-    pdb.set_trace()
 
     res_all = []
+    score_max = 0
+    cls_max = []
+    dets_max = []
 
     for cls_ind, cls in enumerate(CLASSES[1:]):
         cls_ind += 1 # because we skipped background
@@ -131,24 +133,30 @@ def demo(net, image_name):
         res_box = {}
         res_box['class'] = cls
         res_box['box'] = dets[0, 0:4]
-        res_box['score'] = cls
+        res_box['score'] = dets[0, 4]
         res_all.append(res_box)
 
-        vis_detections(im, cls, dets, image_name, thresh=CONF_THRESH)
+        if res_box['score'] > score_max:
+            cls_max = cls
+            dets_max = dets
+            score_max = res_box['score']
+
+    if score_max > CONF_THRESH:
+        vis_detections(im, cls_max, dets_max, image_name, thresh=CONF_THRESH)
     
     # save the detected boxes and classes
     head, tail = os.path.split(image_name)
     fname = os.path.splitext(tail)[0]
     out_folder = os.path.basename(head)
-    txt_file = os.path.join(out_path, out_folder, fname+'.txt')
-    fp = open(txt_file, "w")
-    for box in res_all:
-        rect = box['box']
-        fp.write("%s %s %.6f %d %d %d %d" % (fname, box['class'], box['score'], rect[0], rect[1], rect[2], rect[3]) )
-    fp.close()
+    # txt_file = os.path.join(out_path, out_folder, fname+'.txt')
+    # fp = open(txt_file, "w")
+    # for box in res_all:
+    #     rect = box['box']
+    #     fp.write("%s %s %.6f %d %d %d %d" % (fname, box['class'], box['score'], rect[0], rect[1], rect[2], rect[3]) )
+    # fp.close()
 
-    # mat_file = os.path.join(out_path, out_folder, tail+'.mat')
-    # sio.savemat(mat_file, mdict={'boxes': boxes, 'scores': scores})
+    mat_file = os.path.join(out_path, out_folder, fname+'.mat')
+    sio.savemat(mat_file, mdict={'det_res': res_all})
 
 def parse_args():
     """Parse input arguments."""
@@ -166,7 +174,8 @@ def parse_args():
     return args
 
 if __name__ == '__main__':
-    cfg.TEST.HAS_RPN = True  # Use RPN for proposals
+    cfg.TEST.HAS_RPN = True
+      # Use RPN for proposals
 
     args = parse_args()
 
@@ -175,10 +184,17 @@ if __name__ == '__main__':
     # caffemodel = os.path.join(cfg.ROOT_DIR, 'data', 'faster_rcnn_models',
     #                           NETS[args.demo_net][1])
     
-    prototxt = os.path.join('/home/shangxuan/visenzeWork/data-platform/tasks/faster_rcnn_vgg/faster_rcnn_None',
+    # load faster rcnn model or fast rcnn model
+    if cfg.TEST.HAS_RPN:
+        prototxt = os.path.join('/home/shangxuan/visenzeWork/data-platform/tasks/faster_rcnn_vgg/faster_rcnn_None',
                             'deploy.prototxt')
-    caffemodel = os.path.join('/home/shangxuan/visenzeWork/data-platform/tasks/faster_rcnn_vgg/faster_rcnn_None',
+        caffemodel = os.path.join('/home/shangxuan/visenzeWork/data-platform/tasks/faster_rcnn_vgg/faster_rcnn_None',
                            'vgg_cnn_m_1024_faster_rcnn_iter_300000.caffemodel')
+    else:
+        prototxt = os.path.join('/home/shangxuan/visenzeWork/data-platform/tasks/frcnn/frcnn_None',
+                            'deploy.prototxt')
+        caffemodel = os.path.join('/home/shangxuan/visenzeWork/data-platform/tasks/frcnn/frcnn_None', 
+                            'caffenet_fast_rcnn_iter_80000.caffemodel')
 
     if not os.path.isfile(caffemodel):
         raise IOError(('{:s} not found.\nDid you run ./data/scripts/'
@@ -215,7 +231,7 @@ if __name__ == '__main__':
             demo(net, im_name)
 
     input_path = '/mnt/distribute_env/usr/xf/rcnn_test/'
-    test_class = 'skirt'
+    test_class = 'dress'
     for (dirpath, dirnames, filenames) in os.walk(input_path+test_class):
         for im_names in filenames:
             if im_names[0] == '.':
@@ -225,7 +241,7 @@ if __name__ == '__main__':
             if imghdr.what(im_name) == None:
                 continue
             print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
-            print 'Demo for {}'.format(im_name)
+            print 'Detection for {}'.format(im_name)
             demo(net, im_name)
             print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
 
