@@ -151,6 +151,9 @@ __C.TEST.BBOX_REG = True
 # Propose boxes
 __C.TEST.HAS_RPN = False
 
+# Propose boxes
+__C.TEST.USE_ROIS = False
+
 # Test using these proposals
 __C.TEST.PROPOSAL_METHOD = 'selective_search'
 

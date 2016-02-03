@@ -56,8 +56,8 @@ def get_yaml_files(folder, num_selected):
     sub_names = [];
     for dir_path, sub_dir, all_sub_file in os.walk(folder, followlinks=True):
         for sub_file in all_sub_file:
-            if sub_file.endswith('.yaml') or \
-                    sub_file.endswith('.yml'):
+            if sub_file.endswith('.yml'): #or \
+                    #sub_file.endswith('.yml'):
                 full_name = os.path.join(dir_path, sub_file);
                 x = full_name.replace(folder, '');
                 if len(x) >= 1 and x[0] == '/':
@@ -70,7 +70,7 @@ def get_yaml_files(folder, num_selected):
         return sub_names
 
 def clamp_box(data_config):
-    pdb.set_trace()
+    print 'Begin to clamp box...'
     all_image_info = data_config['images']
     folder = data_config['folder']
     to_remove_image = []
@@ -148,19 +148,21 @@ def check_format(info):
     for image_info in all_image_info:
         assert type(image_info) == dict, info
         assert image_info.has_key('name'), info
-        if image_info.has_key('boxes'):
-            all_box_info = image_info['boxes']
-            assert type(all_box_info) == list, info
-            for box_info in all_box_info:
-                assert type(box_info) == dict, info
-                #assert box_info.has_key('label'), \
-                        #(info, box_info)
-                #assert type(box_info['label']) == str, \
-                        #(info, box_info)
-                assert box_info.has_key('x1y1x2y2'), \
-                        (info, box_info)
-                assert type(box_info['x1y1x2y2']) == str, \
-                        (info, box_info)
+        assert image_info.has_key('boxes'), info
+        all_box_info = image_info['boxes']
+        assert type(all_box_info) == list, info
+        is_use = False
+        for box_info in all_box_info:
+            assert type(box_info) == dict, info
+            #assert box_info.has_key('label'), \
+                    #(info, box_info)
+            #assert type(box_info['label']) == str, \
+                    #(info, box_info)
+            assert box_info.has_key('x1y1x2y2'), \
+                    (info, box_info)
+            assert type(box_info['x1y1x2y2']) == str, \
+                    (info, box_info)
+            
 
 def parallel_instance_get_imdb(info):
     folder, yaml_file = info
@@ -178,6 +180,7 @@ def parallel_instance_get_imdb(info):
             'JPEGImages')
     for image_info in x['images']:
         image_info['name'] = os.path.join(curr_folder, image_info['name'])
+    #logger.info('File {} has been loaded'.format(full_yaml_file))
     return x
 
 def parallel_get_imdb_folder_yaml(folder, label_set = None, num_selected = 0):
@@ -186,7 +189,7 @@ def parallel_get_imdb_folder_yaml(folder, label_set = None, num_selected = 0):
     logger.info("begin parallel loading yaml files")
     pool = Pool(64)
     jobs = pool.map_async(parallel_instance_get_imdb, \
-            zip([folder] * len(all_yaml_file), all_yaml_file))
+            zip([folder] * len(all_yaml_file), all_yaml_file), chunksize=1)
     while not jobs.ready():
         logger.info('left: {}'.format(jobs._number_left))
         time.sleep(10)
@@ -202,14 +205,14 @@ def parallel_get_imdb_folder_yaml(folder, label_set = None, num_selected = 0):
     logger.info("begin to add background label if not exist")
     add_missing_labels(result['images'])
     logger.info("finish adding background label if not exist")
-    if label_set == None:
-        result['label_set'] = infer_label_set(result['images'])
-    else:
-        all_bg = [label for label in label_set if 'background' in label.lower()]
-        for bg in all_bg:
-            label_set.remove(bg)
-        result['label_set'] = ['__background__'] + label_set
-        remove_unknown_box(result)
+    # if label_set == None:
+    #     result['label_set'] = infer_label_set(result['images'])
+    # else:
+    #     all_bg = [label for label in label_set if 'background' in label.lower()]
+    #     for bg in all_bg:
+    #         label_set.remove(bg)
+    #     result['label_set'] = ['__background__'] + label_set
+    #     remove_unknown_box(result)
     return result
 
 def sequence_get_imdb_folder_yaml(folder, label_set, num_selected):
@@ -271,7 +274,7 @@ def get_imdb_yaml(name, label_set = None):
     return image_info
 
 def remove_images_no_label(all_info):
-    logger.info("begin remove images with no labels")
+    logger.info("begin removing images with no labels")
     all_image_info = all_info['images']
     logger.info("There are {} images".format(len(all_image_info)))
     to_be_remove = []
@@ -290,24 +293,75 @@ def remove_images_no_label(all_info):
         all_image_info.remove(image_info)
     logger.info('after remove {}'.format(len(all_image_info)))
 
+def remove_unknown_box_and_map(all_info, cls_mapping = None):
+    print 'Removing unkonwn box and mapping the detection classes ...'
+    label_set = all_info['label_set']
+    all_image_info = all_info['images']
+    for image_info in all_image_info:
+        all_box = image_info['boxes']
+        to_be_removed = []
+        if cls_mapping is None:
+            for box_info in all_box:
+                if box_info['label'] not in label_set:
+                    to_be_removed.append(box_info)
+        else:
+            # map the label first
+            for box_info in all_box:
+                if box_info['label'] in label_set:
+                    continue
+                box_label_map = cls_mapping.get(box_info['label'], None)
+                if box_label_map is None or box_label_map not in label_set:
+                    to_be_removed.append(box_info)
+                else:
+                    box_info['label'] = box_label_map
+
+        for box_info in to_be_removed:
+            all_box.remove(box_info)
+
 def get_imdb(name, param = {}):
     """Get an imdb (image database) by name."""
-    pdb.set_trace()
     if not __sets.has_key(name):
+
         if os.path.exists(name):
-            if os.path.isdir(name):
-                image_info = get_imdb_folder_yaml(name, 
-                        param.get('label_set', None), 
-                        param.get('num_selected', 0))
-            elif os.path.isfile(name):
-                image_info = get_imdb_yaml(name, param.get('label_set', None))
+            # loads/saves from/to a cache file to speed up future calls
+            cache_dir = param['cache_dir']
+            output_dir = param['output_dir']
+            output_cache_name = os.path.basename(os.path.dirname(output_dir))
+            cache_file = os.path.join(cache_dir, output_cache_name + '_imdb_train.pkl')
+            if os.path.exists(cache_file): # load from cache
+                with open(cache_file, 'rb') as fid:
+                    image_info = pickle.load(fid)
+                    logger.info('image info loaded from {}'.format(cache_file))
             else:
-                assert False, 'what is {}'.format(name)
-            pdb.set_trace()
-            clamp_box(image_info)
+                if os.path.isdir(name):
+                    image_info = get_imdb_folder_yaml(name, 
+                            param.get('label_set', None), 
+                            param.get('num_selected', 0))
+                elif os.path.isfile(name):
+                    image_info = get_imdb_yaml(name, param.get('label_set', None))
+                else:
+                    assert False, 'what is {}'.format(name)
+                clamp_box(image_info)
+                # save to cache file
+                # with open(cache_file, 'wb') as fid:
+                #     pickle.dump(image_info, fid, pickle.HIGHEST_PROTOCOL)
+                #     logger.info('image info saved to {}'.format(cache_file))
+            
+            # remove images whose label is not in the label set
+            # and map a set of small classes into a few larger categories
+            label_set = param.get('label_set', None)
+            if label_set == None:
+                image_info['label_set'] = infer_label_set(image_info['images'])
+            else:
+                all_bg = [label for label in label_set if 'background' in label.lower()]
+                for bg in all_bg:
+                    label_set.remove(bg)
+                image_info['label_set'] = ['__background__'] + label_set
+                remove_unknown_box_and_map(image_info, param.get('cls_mapping', None))
             if param.get('is_remove_no_label', False):
                 remove_images_no_label(image_info)
             return ViDetectionData(image_info)
+
         else:
             raise KeyError('Unknown dataset: {}'.format(name))
     else:
