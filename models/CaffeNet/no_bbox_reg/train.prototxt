@@ -191,7 +191,7 @@ layer {
   type: "ROIPooling"
   bottom: "conv5"
   bottom: "rois"
-  top: "pool5"
+  top: "roi_pool5"
   roi_pooling_param {
     pooled_w: 6
     pooled_h: 6
@@ -201,7 +201,7 @@ layer {
 layer {
   name: "fc6"
   type: "InnerProduct"
-  bottom: "pool5"
+  bottom: "roi_pool5"
   top: "fc6"
   param {
     lr_mult: 1
