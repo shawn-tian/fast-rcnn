@@ -151,7 +151,6 @@ def check_format(info):
         assert image_info.has_key('boxes'), info
         all_box_info = image_info['boxes']
         assert type(all_box_info) == list, info
-        is_use = False
         for box_info in all_box_info:
             assert type(box_info) == dict, info
             #assert box_info.has_key('label'), \
@@ -187,7 +186,7 @@ def parallel_get_imdb_folder_yaml(folder, label_set = None, num_selected = 0):
     all_yaml_file = get_yaml_files(folder, num_selected)
     result = None
     logger.info("begin parallel loading yaml files")
-    pool = Pool(64)
+    pool = Pool(32)
     jobs = pool.map_async(parallel_instance_get_imdb, \
             zip([folder] * len(all_yaml_file), all_yaml_file), chunksize=1)
     while not jobs.ready():
