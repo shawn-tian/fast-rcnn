@@ -13,6 +13,8 @@ from generate_anchors import generate_anchors
 from fast_rcnn.bbox_transform import bbox_transform_inv, clip_boxes
 from fast_rcnn.nms_wrapper import nms
 
+import scipy.io as sio
+import pdb
 DEBUG = False
 
 class ProposalLayer(caffe.Layer):
@@ -33,7 +35,7 @@ class ProposalLayer(caffe.Layer):
             print 'feat_stride: {}'.format(self._feat_stride)
             print 'anchors:'
             print self._anchors
-
+        #pdb.set_trace()
         # rois blob: holds R regions of interest, each is a 5-tuple
         # (n, x1, y1, x2, y2) specifying an image batch index n and a
         # rectangle (x1, y1, x2, y2)
@@ -71,6 +73,11 @@ class ProposalLayer(caffe.Layer):
         scores = bottom[0].data[:, self._num_anchors:, :, :]
         bbox_deltas = bottom[1].data
         im_info = bottom[2].data[0, :]
+
+        if DEBUG:
+            mat_file = '/home/shangxuan/visenzeWork/cache_data/faster_rcnn_test/bag/bag_002_rpn.mat'
+            sio.savemat(mat_file, mdict={'im_info': im_info, 'rpn_pred_bbox_delta': bbox_deltas, 'rpn_cls_scores': scores})
+        #pdb.set_trace()
 
         if DEBUG:
             print 'im_size: ({}, {})'.format(im_info[0], im_info[1])
@@ -117,8 +124,19 @@ class ProposalLayer(caffe.Layer):
         # reshape to (1 * H * W * A, 1) where rows are ordered by (h, w, a)
         scores = scores.transpose((0, 2, 3, 1)).reshape((-1, 1))
 
+        if DEBUG:
+            mat_file = '/home/shangxuan/visenzeWork/cache_data/faster_rcnn_test/bag/bag_002_rpn_2.mat'
+            sio.savemat(mat_file, mdict={'im_info': im_info, 'rpn_pred_bbox_delta': bbox_deltas, \
+                'rpn_anchors': anchors, 'rpn_cls_scores': scores})
+        #pdb.set_trace()
+
         # Convert anchors into proposals via bbox transformations
         proposals = bbox_transform_inv(anchors, bbox_deltas)
+
+        if DEBUG:
+            mat_file = '/home/shangxuan/visenzeWork/cache_data/faster_rcnn_test/bag/bag_002_rpn_inv.mat'
+            sio.savemat(mat_file, mdict={'rpn_box_inv': proposals})
+        #pdb.set_trace()
 
         # 2. clip predicted boxes to image
         proposals = clip_boxes(proposals, im_info[:2])
@@ -128,6 +146,10 @@ class ProposalLayer(caffe.Layer):
         keep = _filter_boxes(proposals, min_size * im_info[2])
         proposals = proposals[keep, :]
         scores = scores[keep]
+
+        if DEBUG:
+            mat_file = '/home/shangxuan/visenzeWork/cache_data/faster_rcnn_test/bag/bag_002_fiter_box.mat'
+            sio.savemat(mat_file, mdict={'pred_boxes': proposals, 'scores': scores})
 
         # 4. sort all (proposal, score) pairs by score from highest to lowest
         # 5. take top pre_nms_topN (e.g. 6000)
@@ -140,6 +162,10 @@ class ProposalLayer(caffe.Layer):
         # 6. apply nms (e.g. threshold = 0.7)
         # 7. take after_nms_topN (e.g. 300)
         # 8. return the top proposals (-> RoIs top)
+        if DEBUG:
+            mat_file = '/home/shangxuan/visenzeWork/cache_data/faster_rcnn_test/bag/bag_002_rpn_nms.mat'
+            sio.savemat(mat_file, mdict={'pred_boxes': proposals, 'scores': scores})
+
         keep = nms(np.hstack((proposals, scores)), nms_thresh)
         if post_nms_topN > 0:
             keep = keep[:post_nms_topN]
@@ -153,6 +179,11 @@ class ProposalLayer(caffe.Layer):
         blob = np.hstack((batch_inds, proposals.astype(np.float32, copy=False)))
         top[0].reshape(*(blob.shape))
         top[0].data[...] = blob
+
+        if DEBUG:
+            mat_file = '/home/shangxuan/visenzeWork/cache_data/faster_rcnn_test/bag/bag_002_rpn_box.mat'
+            sio.savemat(mat_file, mdict={'rpn_box': proposals, 'rpn_scores': scores})
+            pdb.set_trace()
 
         # [Optional] output scores blob
         if len(top) > 1:

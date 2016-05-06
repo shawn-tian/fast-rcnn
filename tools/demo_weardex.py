@@ -43,7 +43,7 @@ NETS = {'vgg16': ('VGG16',
         'zf': ('ZF',
                   'ZF_faster_rcnn_final.caffemodel')}
 
-out_path = '/home/shangxuan/visenzeWork/data-platform/tasks/fast_rcnn_test/'
+out_path = '/home/shangxuan/visenzeWork/cache_data/faster_rcnn_test/'
 
 def vis_detections(im, class_name, dets, im_name, thresh=0.5):
     """Draw detected bounding boxes."""
@@ -160,7 +160,7 @@ def demo(net, image_name):
     # mat_file = os.path.join(out_path, out_folder, fname+'_bbox.mat')
     # sio.savemat(mat_file, mdict={'boxes': boxes})
     mat_file = os.path.join(out_path, out_folder, fname+'.mat')
-    sio.savemat(mat_file, mdict={'det_res': res_all})
+    sio.savemat(mat_file, mdict={'det_res': res_all, 'rpn_boxes': boxes, 'rpn_scores': scores})
 
 def parse_args():
     """Parse input arguments."""
@@ -179,7 +179,7 @@ def parse_args():
 
 if __name__ == '__main__':
 
-    cfg_file = '/home/shangxuan/visenzeWork/data-platform/recognition-pipeline/pipeline/models/frcnn_config.yml'
+    cfg_file = '/home/shangxuan/visenzeWork/data-platform_bk/recognition-pipeline/pipeline/models/frcnn_taobao125_config.yml'
     cfg_from_file(cfg_file)
     #cfg.TEST.HAS_RPN = True
       # Use RPN for proposals
@@ -195,16 +195,15 @@ if __name__ == '__main__':
     
     # load faster rcnn model or fast rcnn model
     if cfg.TEST.HAS_RPN:
-        prototxt = os.path.join('/home/shangxuan/visenzeWork/data-platform/tasks/faster_rcnn_vgg/faster_rcnn_None',
+        prototxt = os.path.join('/home/shangxuan/visenzeWork/data-platform_bk/tasks/faster_rcnn_vgg/faster_rcnn_None',
                             'deploy.prototxt')
-        caffemodel = os.path.join('/home/shangxuan/visenzeWork/data-platform/tasks/faster_rcnn_vgg/faster_rcnn_None',
+        caffemodel = os.path.join('/home/shangxuan/visenzeWork/data-platform_bk/tasks/faster_rcnn_vgg/faster_rcnn_None',
                            'vgg_cnn_m_1024_faster_rcnn_iter_300000.caffemodel')
     else:
-        prototxt = os.path.join('/home/shangxuan/visenzeWork/data-platform/tasks/frcnn/frcnn_None',
+        prototxt = os.path.join('/home/shangxuan/visenzeWork/data-platform_bk/tasks/frcnn/frcnn_None',
                             'deploy.prototxt')
-        caffemodel = os.path.join('/home/shangxuan/visenzeWork/data-platform/tasks/frcnn/frcnn_None', 
+        caffemodel = os.path.join('/home/shangxuan/visenzeWork/data-platform_bk/tasks/frcnn/frcnn_None', 
                             'caffenet_fast_rcnn_iter_80000.caffemodel')
-
     if not os.path.isfile(caffemodel):
         raise IOError(('{:s} not found.\nDid you run ./data/scripts/'
                        'fetch_fast_rcnn_models.sh?').format(caffemodel))
@@ -229,12 +228,12 @@ if __name__ == '__main__':
             demo(net, im_name)
 
     input_path = '/mnt/distribute_env/usr/xf/rcnn_test/'
-    test_class = 'sunglasses_3'
+    test_class = 'bag'
     for (dirpath, dirnames, filenames) in os.walk(input_path+test_class):
         for im_names in filenames:
             if im_names[0] == '.':
                 continue
-            #im_names = 'obj_bag_017.jpg'
+            # im_names = 'obj_bag_002.jpg'
             im_name = os.path.join(input_path, test_class, im_names)
             
             if imghdr.what(im_name) == None:

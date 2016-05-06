@@ -122,7 +122,7 @@ def im_detect(net, im, boxes=None):
     """
     blobs, im_scales = _get_blobs(im, boxes)
 
-
+    pdb.set_trace()
     # When mapping from image ROIs to feature map ROIs, there's some aliasing
     # (some distinct image ROIs get mapped to the same feature ROI).
     # Here, we identify duplicate feature ROIs, so we only compute features

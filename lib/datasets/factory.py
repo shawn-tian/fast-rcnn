@@ -56,7 +56,7 @@ def get_yaml_files(folder, num_selected):
     sub_names = [];
     for dir_path, sub_dir, all_sub_file in os.walk(folder, followlinks=True):
         for sub_file in all_sub_file:
-            if sub_file.endswith('.yml'): #or \
+            if sub_file.endswith('_rpn_edgebox.yml'): #or \
                     #sub_file.endswith('.yml'):
                 full_name = os.path.join(dir_path, sub_file);
                 x = full_name.replace(folder, '');
@@ -275,13 +275,14 @@ def get_imdb_yaml(name, label_set = None):
 def remove_images_no_label(all_info):
     logger.info("begin removing images with no labels")
     all_image_info = all_info['images']
+    label_set = all_info['label_set']
     logger.info("There are {} images".format(len(all_image_info)))
     to_be_remove = []
     for image_info in all_image_info:
         all_box = image_info['boxes']
         is_use = False
         for box in all_box:
-            if box['label'] != '__background__':
+            if box['label'] != '__background__' and box['label'] in label_set:
                 is_use = True
                 break
         if is_use == False:
@@ -306,9 +307,10 @@ def remove_unknown_box_and_map(all_info, cls_mapping = None):
         else:
             # map the label first
             for box_info in all_box:
-                if box_info['label'] in label_set:
+                if box_info['label'].lower() in label_set:
+                    box_info['label'] = box_info['label'].lower()
                     continue
-                box_label_map = cls_mapping.get(box_info['label'], None)
+                box_label_map = cls_mapping.get(box_info['label'].lower(), None)
                 if box_label_map is None or box_label_map not in label_set:
                     to_be_removed.append(box_info)
                 else:
